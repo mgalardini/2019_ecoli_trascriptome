@@ -13,16 +13,22 @@ def get_options():
     description = "Extract putative transcripts from a series of gff files"
     parser = argparse.ArgumentParser(description=description)
     
-    parser.add_argument('pangenome', action='store',
+    parser.add_argument('pangenome',
                         help='Roary\'s gene presence absence file')
-    parser.add_argument('gffdir', action='store',
+    parser.add_argument('gffdir',
                         help='GFF files directory (format: COLUMN_ID.gff)')
-    parser.add_argument('priority', action='store',
+    parser.add_argument('priority',
                         help='Priority strain (i.e. Roary\'s column)')
     
-    parser.add_argument('--reference', action='store',
+    parser.add_argument('--reference',
                         default=None,
                         help='Only consider genes from a specific organism [Default: full pangenome]')
+    parser.add_argument('--equivalent',
+                        default=None,
+                        help='Equivalences in roary\'s columns, in tabular format '
+                             '(column -> equivalent_strain). '
+                             'Useful if two or more GFF files are identical '
+                             'when running roary')
 
     return parser.parse_args()
 
@@ -45,6 +51,13 @@ if __name__ == "__main__":
         roary.index = roary[options.reference]
         roary.index.name = 'Gene'
     
+    # Consider equivalent strains
+    equi = {}
+    for l in open(options.equivalent):
+        orig, other = l.rstrip().split('\t')
+        if other not in roary.columns:
+            roary[other] = roary[orig].copy()
+
     # Prepare all the GFF files parsers
     parsers = {}
     for column in roary.columns:
