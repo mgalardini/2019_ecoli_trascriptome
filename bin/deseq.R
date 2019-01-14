@@ -72,7 +72,7 @@ res <- results(dds,
                parallel=TRUE,
                BPPARAM=multicoreParam)
 write.csv(as.data.frame(res),
-          file=file.path(args$directory,
+          file=file.path(args$output,
                          'overall.csv'))
 # strain's contrasts
 strains <- unique(s2c$strain)
