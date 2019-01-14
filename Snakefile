@@ -17,6 +17,8 @@ roary_dir = pj(out, 'roary')
 transcripts_dir = pj(out, 'transcripts')
 indexes_dir = pj(out, 'indexes')
 counts_dir = pj(out, 'counts')
+counts_ref_dir = pj(out, 'counts_reference')
+de_dir = pj(out, 'de')
 
 # data files
 table = pj(data, 'samples.tsv')
@@ -35,6 +37,14 @@ counts = [pj(counts_dir,
              x.rstrip().split('\t')[2],
              'abundance.tsv')
           for x in open(table)][1:]
+counts_ref = [pj(counts_ref_dir,
+                 x.rstrip().split('\t')[1],
+                 x.rstrip().split('\t')[2],
+                 'abundance.tsv')
+              for x in open(table)][1:]
+contrasts = sorted({pj(de_dir, '%s.csv' % x)
+                    for x in strains
+                    if x != 'NT12001'})
 
 rule pangenome:
   input: gff
@@ -83,3 +93,35 @@ rule:
     sd=70
   shell:
     'mkdir -p {params.dir1} && trimmomatic SE {params.rdir}$(awk \'{{if ($2 == "{wildcards.strain}" && $3 == "{wildcards.replica}") print $1}}\' {input.rf}) /dev/stdout ILLUMINACLIP:{params.tdir}/adapters/TruSeq3-SE.fa:2:30:10 | kallisto quant -b 100 -i {input.index} -o {params.dir2} --bias --single -l {params.average} -s {params.sd} /dev/stdin'
+
+rule counts_reference:
+  input: counts_ref
+
+rule:
+  input:
+    index=pj(indexes_dir, 'NT12001.idx'),
+    rf=table
+  output:
+    pj(counts_ref_dir, '{strain}', '{replica}', 'abundance.tsv')
+  params:
+    rdir=reads_dir,
+    dir1=pj(counts_ref_dir, '{strain}'),
+    dir2=pj(counts_ref_dir, '{strain}', '{replica}'),
+    tdir=trimmomatic_dir,
+    average=130,
+    sd=70
+  shell:
+    'mkdir -p {params.dir1} && trimmomatic SE {params.rdir}$(awk \'{{if ($2 == "{wildcards.strain}" && $3 == "{wildcards.replica}") print $1}}\' {input.rf}) /dev/stdout ILLUMINACLIP:{params.tdir}/adapters/TruSeq3-SE.fa:2:30:10 | kallisto quant -b 100 -i {input.index} -o {params.dir2} --bias --single -l {params.average} -s {params.sd} /dev/stdin'
+
+rule de:
+  input:
+    rf=table,
+    c=counts
+  output:
+    contrasts 
+  params:
+    d=de_dir,
+    c=counts_dir
+  threads: 40
+  shell:
+    'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 1 --foldchange 0'
