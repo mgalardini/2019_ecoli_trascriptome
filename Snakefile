@@ -49,6 +49,8 @@ contrasts = sorted({pj(de_dir, '%s.csv' % x)
 contrasts_ref = sorted({pj(de_ref_dir, '%s.csv' % x)
                         for x in strains
                         if x != 'NT12001'})
+vst_straight = pj(out, 'vst_straight.tsv')
+vst_corrected = pj(out, 'vst_corrected.tsv')
 
 rule pangenome:
   input: gff
@@ -120,19 +122,6 @@ rule:
 rule de:
   input:
     rf=table,
-    c=counts
-  output:
-    contrasts 
-  params:
-    d=de_dir,
-    c=counts_dir
-  threads: 40
-  shell:
-    'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 0.99 --foldchange 0'
-
-rule de_reference:
-  input:
-    rf=table,
     c=counts_ref
   output:
     contrasts_ref
@@ -142,3 +131,15 @@ rule de_reference:
   threads: 40
   shell:
     'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 0.99 --foldchange 0'
+
+rule vst:
+  input:
+    rf=table,
+    c=counts_ref
+  output:
+    vst_straight,
+    vst_corrected
+  params:
+    counts_ref_dir
+  shell:
+    'Rscript bin/normalize_counts.R {input.rf} {params} {output}'
