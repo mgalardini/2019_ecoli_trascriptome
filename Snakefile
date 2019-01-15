@@ -19,6 +19,7 @@ indexes_dir = pj(out, 'indexes')
 counts_dir = pj(out, 'counts')
 counts_ref_dir = pj(out, 'counts_reference')
 de_dir = pj(out, 'de')
+de_ref_dir = pj(out, 'de_reference')
 
 # data files
 table = pj(data, 'samples.tsv')
@@ -45,6 +46,9 @@ counts_ref = [pj(counts_ref_dir,
 contrasts = sorted({pj(de_dir, '%s.csv' % x)
                     for x in strains
                     if x != 'NT12001'})
+contrasts_ref = sorted({pj(de_ref_dir, '%s.csv' % x)
+                        for x in strains
+                        if x != 'NT12001'})
 
 rule pangenome:
   input: gff
@@ -124,4 +128,17 @@ rule de:
     c=counts_dir
   threads: 40
   shell:
-    'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 1 --foldchange 0'
+    'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 0.99 --foldchange 0'
+
+rule de_reference:
+  input:
+    rf=table,
+    c=counts_ref
+  output:
+    contrasts_ref
+  params:
+    d=de_ref_dir,
+    c=counts_ref_dir
+  threads: 40
+  shell:
+    'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 0.99 --foldchange 0'
