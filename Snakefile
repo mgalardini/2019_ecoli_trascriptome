@@ -49,6 +49,7 @@ contrasts = sorted({pj(de_dir, '%s.csv' % x)
 contrasts_ref = sorted({pj(de_ref_dir, '%s.csv' % x)
                         for x in strains
                         if x != 'NT12001'})
+combined_de = pj(out, 'fold_changes.tsv')
 vst_straight = pj(out, 'vst_straight.tsv')
 vst_corrected = pj(out, 'vst_corrected.tsv')
 
@@ -131,6 +132,11 @@ rule de:
   threads: 40
   shell:
     'Rscript bin/deseq.R {input.rf} {params.c} {params.d} --cores {threads} --pvalue 0.99 --foldchange 0'
+
+rule de_combine:
+  input: contrasts_ref
+  output: combined_de
+  shell: 'python3 bin/merge_fold_changes.py {input} > {output}'
 
 rule vst:
   input:
